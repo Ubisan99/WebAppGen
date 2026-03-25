@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>WebGen — Ollama Local Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0c0c0e;
+  --surface: #111114;
+  --surface2: #18181d;
+  --surface3: #1f1f26;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.10);
+  --text: #d4d4dc;
+  --text2: #8888a0;
+  --text3: rgba(255,255,255,0.28);
+  --accent: #4f6ef7;
+  --accent-dim: rgba(79,110,247,0.12);
+  --accent-glow: rgba(79,110,247,0.25);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.12);
+  --yellow: #eab308;
+  --red: #ef4444;
+  --sidebar-w: 248px;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── TOPBAR ── */
+#topbar {
+  height: 44px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 10px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.logo-mark {
+  width: 26px; height: 26px;
+  background: var(--accent);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.logo-mark svg { width: 14px; height: 14px; fill: #fff; }
+.topbar-title {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+.topbar-sep { width: 1px; height: 18px; background: var(--border2); margin: 0 4px; }
+#ollama-status {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text2);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+#ollama-status:hover { border-color: var(--accent); color: var(--text); }
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text3);
+  transition: background 0.3s;
+}
+.status-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-dot.error { background: var(--red); }
+
+.topbar-spacer { flex: 1; }
+#model-pill {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(79,110,247,0.2);
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#model-pill:hover { background: var(--accent-glow); }
+
+/* ── LAYOUT ── */
+#layout { display: flex; flex: 1; overflow: hidden; }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.sidebar-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: 16px; }
+.sidebar-scroll::-webkit-scrollbar { width: 3px; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+.s-section { padding: 14px 14px 0; }
+.s-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.s-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* IP Input */
+.field-group { margin-bottom: 12px; }
+.field-label { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-bottom: 4px; display: block; letter-spacing: 0.08em; }
+.field-row { display: flex; gap: 6px; }
+.field-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.2s;
+  min-width: 0;
+}
+.field-input::placeholder { color: var(--text3); }
+.field-input:focus { border-color: var(--accent); }
+.field-btn {
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 7px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.field-btn:hover { border-color: var(--accent); color: var(--accent); }
+.field-btn.loading { color: var(--accent); opacity: 0.7; pointer-events: none; }
+
+/* Models list */
+#models-container {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.model-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+}
+.model-item:last-child { border-bottom: none; }
+.model-item:hover { background: var(--surface3); color: var(--text); }
+.model-item.selected { background: var(--accent-dim); color: var(--accent); }
+.model-item.selected .model-radio { background: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+.model-radio {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border2);
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.model-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.model-size { font-size: 9px; color: var(--text3); flex-shrink: 0; }
+.models-empty {
+  padding: 14px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* Quick prompts */
+.quick-btn {
+  display: block;
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  font-family: var(--sans);
+  font-size: 11px;
+  padding: 8px 11px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.quick-btn:hover { background: var(--surface3); border-color: var(--border2); color: var(--text); }
+.quick-btn .q-label { font-size: 9px; color: var(--text3); display: block; margin-top: 1px; font-family: var(--mono); }
+
+/* History */
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 11px;
+  color: var(--text2);
+}
+.history-item:hover { border-color: var(--border2); color: var(--text); }
+.history-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+/* ── MAIN ── */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* Input area */
+#input-area {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.input-row { display: flex; gap: 8px; align-items: flex-end; }
+.input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  gap: 8px;
+  transition: border-color 0.2s;
+}
+.input-wrap:focus-within { border-color: rgba(79,110,247,0.4); }
+#prompt-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  resize: none;
+  min-height: 22px;
+  max-height: 120px;
+  line-height: 1.5;
+}
+#prompt-input::placeholder { color: var(--text3); }
+#gen-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 9px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+#gen-btn:hover { background: #3d5ae4; }
+#gen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.char-count { font-family: var(--mono); font-size: 9px; color: var(--text3); align-self: flex-end; padding: 2px 0; }
+
+/* Tabs */
+#tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0 16px;
+  gap: 0;
+  flex-shrink: 0;
+}
+.tab {
+  padding: 9px 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--text3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  text-transform: uppercase;
+}
+.tab:hover { color: var(--text2); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Preview area */
+#preview-area { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
+
+/* Loading */
+#loading-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+}
+.loader-ring {
+  width: 36px; height: 36px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-text { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.loader-model { font-size: 10px; color: var(--accent); }
+
+/* Empty state */
+#empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  opacity: 0.4;
+}
+.empty-icon { font-size: 32px; margin-bottom: 4px; opacity: 0.4; }
+.empty-title { font-size: 14px; font-weight: 500; color: var(--text2); }
+.empty-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+
+/* Sandbox iframe */
+#preview-frame {
+  width: 100%; height: 100%;
+  border: none;
+  background: #fff;
+  display: none;
+}
+
+/* Code view — touch scroll */
+#code-view {
+  width: 100%;
+  height: 100%;
+  display: none;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y pan-x;
+  overscroll-behavior: contain;
+  padding: 16px;
+}
+#code-view pre {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: #8b9cf8;
+  white-space: pre;
+  min-width: max-content;
+  tab-size: 2;
+}
+/* Code syntax tints */
+#code-view pre .tag    { color: #6ee7b7; }
+#code-view pre .attr   { color: #93c5fd; }
+#code-view pre .string { color: #fcd34d; }
+#code-view pre .comment{ color: #4b5563; }
+
+/* Export bar */
+#export-bar {
+  display: none;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.eb-meta { flex: 1; font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.eb-meta span { color: var(--text2); }
+.eb-actions { display: flex; gap: 6px; }
+.eb-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.eb-btn:hover { border-color: var(--accent); color: var(--accent); }
+.eb-btn.primary { background: var(--accent-dim); border-color: rgba(79,110,247,0.3); color: var(--accent); }
+.eb-btn.primary:hover { background: var(--accent-glow); }
+
+/* Model picker modal */
+#model-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#model-modal.open { display: flex; }
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 20px;
+  width: 320px;
+  max-width: 90vw;
+}
+.modal-title { font-weight: 600; margin-bottom: 14px; font-size: 13px; }
+.modal-close { float: right; background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; line-height: 1; }
+
+/* Toast */
+#toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  transform: translateY(60px);
+  opacity: 0;
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  z-index: 999;
+  max-width: 300px;
+  pointer-events: none;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+
+/* Scrollbars global */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <div class="logo-mark">
+    <svg viewBox="0 0 16 16"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1zm1 3v6h2V5H4zm3 0v6h2V5H7zm3 2v4h2V7h-2z"/></svg>
+  </div>
+  <span class="topbar-title">WebGen Studio</span>
+  <div class="topbar-sep"></div>
+  <div id="ollama-status" onclick="toggleModelModal()" title="Stato connessione Ollama">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Disconnesso</span>
+  </div>
+  <div class="topbar-spacer"></div>
+  <div id="model-pill" onclick="toggleModelModal()">Nessun modello</div>
+</div>
+
+<!-- LAYOUT -->
+<div id="layout">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sidebar-scroll">
+
+      <!-- Connessione -->
+      <div class="s-section" style="margin-top:14px;">
+        <div class="s-label">Connessione</div>
+        <div class="field-group">
+          <label class="field-label">IP : PORTA</label>
+          <div class="field-row">
+            <input type="text" id="pc-ip" class="field-input" placeholder="192.168.1.x" oninput="saveIP()">
+            <button class="field-btn" id="connect-btn" onclick="loadModels()">Carica</button>
+          </div>
+        </div>
+        <div id="models-container">
+          <div class="models-empty">Inserisci l'IP e premi<br>Carica per vedere i modelli</div>
+        </div>
+      </div>
+
+      <!-- Quick prompts -->
+      <div class="s-section">
+        <div class="s-label">Quick Start</div>
+        <button class="quick-btn" onclick="quickPrompt('Snake Game con grafica neon su sfondo scuro')">
+          Snake Game
+          <span class="q-label">Canvas 2D, tastiera + mobile</span>
+        </button>
+        <button class="quick-btn" onclick="quickPrompt('Dashboard analytics con grafici SVG e dati mock')">
+          Analytics Dashboard
+          <span class="q-label">Grafici SVG, KPI cards</span>
+        </button>
+        <button class="quick-btn" onclick="quickPrompt('Timer Pomodoro minimalista con suoni Web Audio')">
+          Pomodoro Timer
+          <span class="q-label">Web Audio, animazioni CSS</span>
+        </button>
+        <button class="quick-btn" onclick="quickPrompt('Calcolatrice scientifica con design moderno')">
+          Calcolatrice
+          <span class="q-label">Operazioni avanzate, animazioni</span>
+        </button>
+        <button class="quick-btn" onclick="quickPrompt('Generatore di password sicure con indicatore di forza')">
+          Password Generator
+          <span class="q-label">Cripto API, forza visiva</span>
+        </button>
+      </div>
+
+      <!-- Cronologia -->
+      <div class="s-section" id="history-section">
+        <div class="s-label">Cronologia</div>
+        <div id="history-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- Input -->
+    <div id="input-area">
+      <div class="input-row">
+        <div class="input-wrap">
+          <textarea id="prompt-input" rows="1" placeholder="Descrivi la web app che vuoi generare con Ollama..." oninput="autoResize(this); updateCharCount()"></textarea>
+          <span class="char-count" id="char-count">0</span>
+        </div>
+        <button id="gen-btn" onclick="generate()">Genera</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div id="tabs">
+      <div class="tab active" id="tab-preview" onclick="switchTab('preview')">Preview</div>
+      <div class="tab" id="tab-code" onclick="switchTab('code')">Codice</div>
+    </div>
+
+    <!-- Preview area -->
+    <div id="preview-area">
+
+      <div id="empty-state">
+        <div class="empty-icon">⬡</div>
+        <div class="empty-title">Nessun output</div>
+        <div class="empty-sub">Scrivi un prompt e genera la tua app</div>
+      </div>
+
+      <div id="loading-state">
+        <div class="loader-ring"></div>
+        <div class="loader-text">
+          <div id="loading-text">In attesa...</div>
+          <div class="loader-model" id="loading-model"></div>
+        </div>
+      </div>
+
+      <!-- Sandbox iframe con sandbox attribute -->
+      <iframe
+        id="preview-frame"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
+        title="Preview applicazione generata"
+      ></iframe>
+
+      <div id="code-view"><pre id="code-pre"></pre></div>
+
+    </div>
+
+    <!-- Export bar -->
+    <div id="export-bar">
+      <div class="eb-meta" id="eb-meta">—</div>
+      <div class="eb-actions">
+        <button class="eb-btn" onclick="copyCode()">Copia</button>
+        <button class="eb-btn primary" onclick="downloadHTML()">Scarica .html</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Model modal -->
+<div id="model-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="toggleModelModal()">✕</button>
+    <div class="modal-title">Seleziona Modello</div>
+    <div id="modal-models-list"></div>
+    <div style="margin-top:14px; font-family:var(--mono); font-size:9px; color:var(--text3); line-height:1.6;">
+      Assicurati che Ollama sia in esecuzione con<br>
+      <span style="color:var(--accent);">OLLAMA_ORIGINS=* ollama serve</span>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let currentHTML = "";
+let activeTab = 'preview';
+let currentModel = null;
+let models = [];
+let history = [];
+let appState = 'empty'; // empty | loading | result
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+(function init() {
+  const ip = localStorage.getItem('ollama_ip') || '';
+  const savedModel = localStorage.getItem('ollama_model') || '';
+  document.getElementById('pc-ip').value = ip;
+  if (ip) loadModels(true, savedModel);
+  loadHistory();
+})();
+
+// ─────────────────────────────────────────────
+// IP
+// ─────────────────────────────────────────────
+function saveIP() {
+  localStorage.setItem('ollama_ip', document.getElementById('pc-ip').value.trim());
+}
+
+function getBase() {
+  let ip = document.getElementById('pc-ip').value.trim();
+  if (!ip) return null;
+  if (!ip.includes(':')) ip += ':11434';
+  if (!ip.startsWith('http')) ip = 'http://' + ip;
+  return ip;
+}
+
+// ─────────────────────────────────────────────
+// LOAD MODELS (dinamico da API Ollama)
+// ─────────────────────────────────────────────
+async function loadModels(silent = false, preselectModel = null) {
+  const base = getBase();
+  if (!base) { toast("Inserisci l'IP del PC", 'yellow'); return; }
+
+  const btn = document.getElementById('connect-btn');
+  btn.textContent = '…';
+  btn.classList.add('loading');
+
+  try {
+    const res = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    models = (data.models || []).map(m => ({
+      name: m.name,
+      size: formatSize(m.size)
+    }));
+
+    if (models.length === 0) {
+      setModelsUI([]);
+      setStatus('error', 'Nessun modello');
+      if (!silent) toast("Nessun modello trovato. Usa 'ollama pull <nome>'", 'yellow');
+    } else {
+      setModelsUI(models);
+      setStatus('online', `${models.length} modelli`);
+
+      // Selezione automatica
+      if (preselectModel) {
+        const m = models.find(m => m.name === preselectModel);
+        if (m) selectModel(m.name);
+        else selectModel(models[0].name);
+      } else {
+        selectModel(models[0].name);
+      }
+
+      if (!silent) toast(`${models.length} modelli caricati`, 'green');
+    }
+  } catch (e) {
+    models = [];
+    setModelsUI(null);
+    setStatus('error', 'Offline');
+    if (!silent) toast("Impossibile connettersi. Controlla IP e OLLAMA_ORIGINS", 'red');
+  }
+
+  btn.textContent = 'Carica';
+  btn.classList.remove('loading');
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '';
+  if (bytes > 1e9) return (bytes / 1e9).toFixed(1) + 'G';
+  if (bytes > 1e6) return (bytes / 1e6).toFixed(0) + 'M';
+  return bytes + 'B';
+}
+
+function setModelsUI(modelList) {
+  const container = document.getElementById('models-container');
+  const modalList = document.getElementById('modal-models-list');
+
+  if (!modelList) {
+    container.innerHTML = '<div class="models-empty">Connessione fallita</div>';
+    modalList.innerHTML = '<div class="models-empty">Connessione fallita</div>';
+    return;
+  }
+  if (modelList.length === 0) {
+    container.innerHTML = '<div class="models-empty">Nessun modello trovato</div>';
+    modalList.innerHTML = '<div class="models-empty">Nessun modello trovato</div>';
+    return;
+  }
+
+  const html = modelList.map(m => `
+    <div class="model-item${currentModel === m.name ? ' selected' : ''}" onclick="selectModel('${m.name}')" data-model="${m.name}">
+      <div class="model-radio"></div>
+      <span class="model-name">${m.name}</span>
+      <span class="model-size">${m.size}</span>
+    </div>
+  `).join('');
+
+  container.innerHTML = html;
+  modalList.innerHTML = html;
+}
+
+function selectModel(name) {
+  currentModel = name;
+  localStorage.setItem('ollama_model', name);
+
+  // Update pills
+  document.getElementById('model-pill').textContent = name;
+
+  // Update UI items
+  document.querySelectorAll('.model-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.model === name);
+  });
+}
+
+// ─────────────────────────────────────────────
+// STATUS
+// ─────────────────────────────────────────────
+function setStatus(state, text) {
+  const dot = document.getElementById('status-dot');
+  const label = document.getElementById('status-text');
+  dot.className = 'status-dot ' + (state === 'online' ? 'online' : state === 'error' ? 'error' : '');
+  label.textContent = text;
+}
+
+// ─────────────────────────────────────────────
+// MODEL MODAL
+// ─────────────────────────────────────────────
+function toggleModelModal() {
+  const modal = document.getElementById('model-modal');
+  modal.classList.toggle('open');
+  if (modal.classList.contains('open') && models.length > 0) setModelsUI(models);
+}
+document.getElementById('model-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+// ─────────────────────────────────────────────
+// GENERATE
+// ─────────────────────────────────────────────
+async function generate() {
+  const prompt = document.getElementById('prompt-input').value.trim();
+  const base = getBase();
+
+  if (!prompt) { toast("Scrivi un prompt", 'yellow'); return; }
+  if (!base) { toast("Inserisci l'IP del PC", 'yellow'); return; }
+  if (!currentModel) { toast("Seleziona un modello", 'yellow'); return; }
+
+  setAppState('loading');
+  document.getElementById('loading-text').textContent = 'Generazione in corso…';
+  document.getElementById('loading-model').textContent = currentModel;
+  document.getElementById('gen-btn').disabled = true;
+
+  const systemPrompt = `Sei un esperto web developer. Rispondi ESCLUSIVAMENTE con codice HTML completo valido, con CSS e JavaScript incorporati. NON includere markdown, NON includere backtick, NON includere spiegazioni. Solo codice HTML grezzo che inizia con <!DOCTYPE html>.`;
+
+  try {
+    const response = await fetch(`${base}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: currentModel,
+        system: systemPrompt,
+        prompt: `Crea questa applicazione web completa: ${prompt}`,
+        stream: false,
+        options: { temperature: 0.7, num_predict: 4096 }
+      }),
+      signal: AbortSignal.timeout(120000)
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const data = await response.json();
+    let code = (data.response || '').trim();
+
+    // Clean markdown fences
+    code = code.replace(/^```[\w]*\n?/gm, '').replace(/```$/gm, '').trim();
+    // Ensure starts with doctype or html
+    const htmlStart = code.search(/<!doctype|<html/i);
+    if (htmlStart > 0) code = code.slice(htmlStart);
+
+    if (!code || code.length < 50) throw new Error('Risposta vuota');
+
+    currentHTML = code;
+    renderResult(code, prompt);
+    setAppState('result');
+    addHistory(prompt, code);
+    toast("App generata con successo", 'green');
+
+  } catch (e) {
+    setAppState('empty');
+    const msg = e.name === 'TimeoutError'
+      ? "Timeout — il modello ha impiegato troppo"
+      : "Errore generazione — controlla connessione e modello";
+    toast(msg, 'red');
+  }
+
+  document.getElementById('gen-btn').disabled = false;
+}
+
+function renderResult(code, prompt) {
+  // iframe sandbox
+  const frame = document.getElementById('preview-frame');
+  frame.srcdoc = code;
+
+  // Code view
+  document.getElementById('code-pre').textContent = code;
+
+  // Meta
+  const lines = code.split('\n').length;
+  const chars = code.length;
+  document.getElementById('eb-meta').innerHTML =
+    `Modello: <span>${currentModel}</span> &nbsp;·&nbsp; ${lines} righe &nbsp;·&nbsp; ${chars.toLocaleString()} caratteri`;
+}
+
+// ─────────────────────────────────────────────
+// APP STATE
+// ─────────────────────────────────────────────
+function setAppState(state) {
+  appState = state;
+  const frame = document.getElementById('preview-frame');
+  const codeView = document.getElementById('code-view');
+  const loading = document.getElementById('loading-state');
+  const empty = document.getElementById('empty-state');
+  const exportBar = document.getElementById('export-bar');
+
+  // Reset all
+  frame.style.display = 'none';
+  codeView.style.display = 'none';
+  loading.style.display = 'none';
+  empty.style.display = 'none';
+  exportBar.style.display = 'none';
+
+  if (state === 'loading') {
+    loading.style.display = 'flex';
+  } else if (state === 'result') {
+    exportBar.style.display = 'flex';
+    if (activeTab === 'preview') frame.style.display = 'block';
+    else codeView.style.display = 'block';
+  } else {
+    empty.style.display = 'flex';
+  }
+}
+
+// ─────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────
+function switchTab(t) {
+  activeTab = t;
+  document.getElementById('tab-preview').classList.toggle('active', t === 'preview');
+  document.getElementById('tab-code').classList.toggle('active', t === 'code');
+  if (appState === 'result') setAppState('result');
+}
+
+// ─────────────────────────────────────────────
+// HISTORY
+// ─────────────────────────────────────────────
+function loadHistory() {
+  try { history = JSON.parse(localStorage.getItem('webgen_history') || '[]'); } catch { history = []; }
+  renderHistory();
+}
+
+function addHistory(prompt, code) {
+  history.unshift({ prompt, code, ts: Date.now(), model: currentModel });
+  if (history.length > 20) history.pop();
+  localStorage.setItem('webgen_history', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (history.length === 0) {
+    list.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--text3);">Nessuna generazione ancora</div>';
+    return;
+  }
+  list.innerHTML = history.map((h, i) => `
+    <div class="history-item" onclick="restoreHistory(${i})">
+      <div class="history-dot"></div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${h.prompt.slice(0, 32)}…</span>
+    </div>
+  `).join('');
+}
+
+function restoreHistory(i) {
+  const h = history[i];
+  currentHTML = h.code;
+  renderResult(h.code, h.prompt);
+  setAppState('result');
+}
+
+// ─────────────────────────────────────────────
+// QUICK PROMPT
+// ─────────────────────────────────────────────
+function quickPrompt(t) {
+  document.getElementById('prompt-input').value = t;
+  autoResize(document.getElementById('prompt-input'));
+  updateCharCount();
+  generate();
+}
+
+// ─────────────────────────────────────────────
+// UI HELPERS
+// ─────────────────────────────────────────────
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function updateCharCount() {
+  const v = document.getElementById('prompt-input').value.length;
+  document.getElementById('char-count').textContent = v;
+}
+
+function copyCode() {
+  if (!currentHTML) return;
+  navigator.clipboard.writeText(currentHTML).then(() => toast("Copiato negli appunti", 'green'));
+}
+
+function downloadHTML() {
+  if (!currentHTML) return;
+  const blob = new Blob([currentHTML], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'webapp-' + Date.now() + '.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = 'default') {
+  const colors = { green: '#22c55e', yellow: '#eab308', red: '#ef4444', default: '#8888a0' };
+  const el = document.getElementById('toast');
+  el.innerHTML = `<span style="color:${colors[type] || colors.default}">${msg}</span>`;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ─────────────────────────────────────────────
+// KEYBOARD
+// ─────────────────────────────────────────────
+document.getElementById('prompt-input').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    generate();
+  }
+});
+</script>
+</body>
+</html>
